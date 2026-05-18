@@ -1,0 +1,9 @@
+flask
+numpy
+pandas
+joblib
+rasterio
+scikit-learn
+matplotlib
+geopandas
+Pillow

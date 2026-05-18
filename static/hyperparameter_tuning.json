@@ -1,0 +1,62 @@
+{
+  "Random Forest": [
+    {
+      "config": "RF (50 trees, depth=5)",
+      "accuracy": 1.0,
+      "auc": 1.0,
+      "cv": 0.963
+    },
+    {
+      "config": "RF (100 trees, depth=None) BEST",
+      "accuracy": 1.0,
+      "auc": 1.0,
+      "cv": 0.963
+    },
+    {
+      "config": "RF (200 trees, depth=10)",
+      "accuracy": 1.0,
+      "auc": 1.0,
+      "cv": 0.963
+    }
+  ],
+  "Gradient Boosting": [
+    {
+      "config": "GB (50, lr=0.2, depth=3)",
+      "accuracy": 1.0,
+      "auc": 1.0,
+      "cv": 0.972
+    },
+    {
+      "config": "GB (100, lr=0.1, depth=4) BEST",
+      "accuracy": 0.985,
+      "auc": 1.0,
+      "cv": 0.956
+    },
+    {
+      "config": "GB (150, lr=0.05, depth=5)",
+      "accuracy": 0.99,
+      "auc": 1.0,
+      "cv": 0.966
+    }
+  ],
+  "Logistic Regression": [
+    {
+      "config": "LR (C=0.1, lbfgs)",
+      "accuracy": 0.98,
+      "auc": 0.9993,
+      "cv": 0.957
+    },
+    {
+      "config": "LR (C=1.0, lbfgs) BEST",
+      "accuracy": 0.99,
+      "auc": 0.9995,
+      "cv": 0.964
+    },
+    {
+      "config": "LR (C=10, liblinear)",
+      "accuracy": 0.985,
+      "auc": 0.9993,
+      "cv": 0.961
+    }
+  ]
+}

@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wildfire Susceptibility Mapping System - Bursa, Turkey</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        :root {
+            --bg-deep:    #07090f;
+            --bg-dark:    #0d1117;
+            --bg-card:    #161b27;
+            --bg-input:   #0d1117;
+            --accent:     #ff4d2e;
+            --accent2:    #ff8c42;
+            --green:      #2ecc71;
+            --blue:       #3b82f6;
+            --border:     rgba(255,255,255,0.07);
+            --text:       #e8eaf0;
+            --muted:      #6b7280;
+            --header-h:   64px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-deep);
+            color: var(--text);
+            overflow: hidden;
+        }
+
+        /* ── HEADER ── */
+        #header {
+            height: var(--header-h);
+            background: linear-gradient(90deg, #1a0a05 0%, #2d0f08 40%, #1a0a05 100%);
+            border-bottom: 1px solid rgba(255,77,46,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            position: relative;
+            z-index: 1000;
+        }
+        #header::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent), var(--accent2), var(--accent), transparent);
+        }
+        .header-left { display: flex; align-items: center; gap: 14px; }
+        .fire-icon {
+            width: 38px; height: 38px;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px;
+            box-shadow: 0 0 16px rgba(255,77,46,0.5);
+        }
+        #header h1 { font-size: 20px; font-weight: 800; letter-spacing: 0.5px; text-shadow: 0 0 20px rgba(255,77,46,0.6), 0 2px 4px rgba(0,0,0,0.5); }
+        #header h1 span { color: var(--accent); text-shadow: 0 0 24px rgba(255,77,46,0.9); }
+        #header p { font-size: 11px; color: var(--muted); margin-top: 3px; letter-spacing: 0.3px; }
+        .header-badge {
+            background: rgba(255,77,46,0.15);
+            border: 1px solid rgba(255,77,46,0.3);
+            color: var(--accent2);
+            font-size: 11px;
+            font-weight: 600;
+            padding: 4px 12px;
+            border-radius: 20px;
+            letter-spacing: 0.5px;
+        }
+
+        /* ── LAYOUT ── */
+        #container { display: flex; height: calc(100vh - var(--header-h)); }
+
+        /* ── SIDEBAR ── */
+        #sidebar {
+            width: 300px;
+            background: var(--bg-dark);
+            border-right: 1px solid var(--border);
+            overflow-y: auto;
+            overflow-x: hidden;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255,77,46,0.3) transparent;
+        }
+        #sidebar::-webkit-scrollbar { width: 4px; }
+        #sidebar::-webkit-scrollbar-thumb { background: rgba(255,77,46,0.3); border-radius: 2px; }
+
+        /* ── PANELS ── */
+        .panel {
+            margin: 12px;
+            background: var(--bg-card);
+            border-radius: 12px;
+            border: 1px solid rgba(255,77,46,0.25);
+            overflow: hidden;
+            box-shadow: 0 0 0 1px rgba(255,255,255,0.04), 0 4px 16px rgba(0,0,0,0.3);
+        }
+        .panel-header {
+            padding: 12px 16px 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+        .panel-icon {
+            width: 28px; height: 28px;
+            border-radius: 7px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 13px;
+            flex-shrink: 0;
+        }
+        .panel-icon.red   { background: rgba(255,77,46,0.15); }
+        .panel-icon.green { background: rgba(46,204,113,0.15); }
+        .panel-icon.blue  { background: rgba(59,130,246,0.15); }
+        .panel-icon.orange{ background: rgba(255,140,66,0.15); }
+        .panel-title { font-size: 12px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase; color: var(--text); }
+        .panel-body { padding: 14px 16px; }
+
+        /* ── STAT BOXES ── */
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+        .stat-box {
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px 6px;
+            text-align: center;
+        }
+        .stat-value { font-size: 20px; font-weight: 700; color: var(--accent); line-height: 1; }
+        .stat-label { font-size: 9px; color: var(--muted); margin-top: 4px; line-height: 1.3; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        /* ── FORM ── */
+        .form-group { margin-bottom: 10px; }
+        .form-group label {
+            font-size: 11px;
+            color: var(--muted);
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        .form-group label span { color: var(--text); font-weight: 600; }
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 4px;
+            border-radius: 2px;
+            background: rgba(255,255,255,0.1);
+            outline: none;
+            cursor: pointer;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px; height: 14px;
+            border-radius: 50%;
+            background: var(--accent);
+            box-shadow: 0 0 6px rgba(255,77,46,0.5);
+            cursor: pointer;
+        }
+        input[type="number"] {
+            width: 100%;
+            padding: 7px 10px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            color: var(--text);
+            font-size: 12px;
+            font-family: 'Inter', sans-serif;
+            transition: border-color 0.2s;
+        }
+        input[type="number"]:focus { outline: none; border-color: rgba(255,77,46,0.5); }
+        select {
+            width: 100%;
+            padding: 7px 10px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            color: var(--text);
+            font-size: 12px;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+        }
+        select:focus { outline: none; border-color: rgba(255,77,46,0.5); }
+
+        /* ── BUTTONS ── */
+        .btn {
+            width: 100%;
+            padding: 9px 14px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
+            letter-spacing: 0.3px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            margin-top: 6px;
+        }
+        .btn-red {
+            background: linear-gradient(135deg, var(--accent), #c0392b);
+            color: white;
+            box-shadow: 0 2px 12px rgba(255,77,46,0.25);
+        }
+        .btn-red:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(255,77,46,0.4); }
+        .btn-blue {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+            box-shadow: 0 2px 12px rgba(59,130,246,0.25);
+        }
+        .btn-blue:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(59,130,246,0.4); }
+        .btn-green {
+            background: linear-gradient(135deg, #2ecc71, #27ae60) !important;
+            color: white !important;
+            box-shadow: 0 2px 12px rgba(46,204,113,0.25) !important;
+        }
+        .btn-active {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            color: white;
+            box-shadow: 0 2px 12px rgba(46,204,113,0.25);
+        }
+        .btn-active:hover { transform: translateY(-1px); }
+
+        /* ── RESULT ── */
+        #result {
+            margin-top: 10px;
+            border-radius: 10px;
+            padding: 12px;
+            display: none;
+            text-align: center;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
+        #result .risk-label { font-size: 13px; font-weight: 700; }
+        #result .risk-pct { font-size: 24px; font-weight: 800; margin: 4px 0; }
+        #result .risk-sub { font-size: 10px; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.5px; }
+        .high { background: linear-gradient(135deg, rgba(231,76,60,0.25), rgba(192,57,43,0.15)); border: 1px solid rgba(231,76,60,0.4); color: #ff6b6b; }
+        .medium { background: linear-gradient(135deg, rgba(243,156,18,0.25), rgba(211,84,0,0.15)); border: 1px solid rgba(243,156,18,0.4); color: #ffd93d; }
+        .low { background: linear-gradient(135deg, rgba(46,204,113,0.25), rgba(39,174,96,0.15)); border: 1px solid rgba(46,204,113,0.4); color: #6bcb77; }
+
+        /* ── LEGEND ── */
+        .legend-gradient {
+            display: flex;
+            align-items: stretch;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        .gradient-bar {
+            width: 14px;
+            border-radius: 7px;
+            background: linear-gradient(to bottom, #e74c3c 0%, #f39c12 50%, #2ecc71 100%);
+            flex-shrink: 0;
+        }
+        .gradient-labels {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            font-size: 10px;
+            color: var(--muted);
+        }
+        .gradient-labels span { display: flex; align-items: center; gap: 4px; }
+        .gradient-labels .dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+        }
+        .legend-divider { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
+        .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; font-size: 11px; color: var(--muted); }
+        .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+        /* ── LOADING ── */
+        #loading {
+            display: none;
+            text-align: center;
+            padding: 8px;
+            font-size: 11px;
+            color: var(--accent2);
+        }
+        .spinner {
+            display: inline-block;
+            width: 12px; height: 12px;
+            border: 2px solid rgba(255,140,66,0.3);
+            border-top-color: var(--accent2);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── MAP ── */
+        #map { flex: 1; }
+
+        /* ── NORTH ARROW ── */
+        .north-arrow {
+            background: rgba(13,17,23,0.85);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 8px;
+            padding: 6px 8px;
+            text-align: center;
+            cursor: default;
+        }
+        .north-arrow .arrow {
+            font-size: 22px;
+            line-height: 1;
+            color: white;
+        }
+        .north-arrow .n-label {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--accent);
+            letter-spacing: 1px;
+            display: block;
+            margin-top: 2px;
+        }
+
+        /* ── LEAFLET OVERRIDES ── */
+        .leaflet-control-scale { margin-bottom: 12px !important; margin-left: 12px !important; }
+        .leaflet-control-scale-line {
+            padding: 2px 6px !important;
+            background: rgba(255,255,255,0.9) !important;
+            border: 2px solid #333 !important;
+            border-top: none !important;
+            color: #333 !important;
+            font-size: 11px !important;
+            font-family: 'Inter', sans-serif !important;
+        }
+        .leaflet-control-attribution { font-size: 9px !important; opacity: 0.5 !important; }
+        .leaflet-popup-content-wrapper {
+            background: #ffffff !important;
+            color: #1a1a2e !important;
+            border-radius: 12px !important;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2) !important;
+            border: none !important;
+        }
+        .leaflet-popup-tip { background: #ffffff !important; }
+        .leaflet-popup-content { margin: 14px 16px !important; font-family: 'Inter', sans-serif !important; }
+    </style>
+</head>
+<body>
+
+<div id="header">
+    <div class="header-left">
+        <div class="fire-icon">🔥</div>
+        <div>
+            <h1>Wildfire <span>Susceptibility</span> Mapping System</h1>
+            <p>Bursa, Turkey &nbsp;·&nbsp; July 26, 2025 Wildfire Incident &nbsp;·&nbsp; CME434 GIS Final Project</p>
+        </div>
+    </div>
+    <div class="header-badge">RANDOM FOREST · AUC 1.000</div>
+</div>
+
+<div id="container">
+    <div id="sidebar">
+
+        <!-- Stats -->
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-icon red">📊</div>
+                <span class="panel-title">Project Statistics</span>
+            </div>
+            <div class="panel-body">
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-value" style="font-size:16px">1000</div>
+                        <div class="stat-label">Sample Points</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value">15</div>
+                        <div class="stat-label">Features</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value">100%</div>
+                        <div class="stat-label">RF Accuracy</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Layers -->
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-icon blue">🗂️</div>
+                <span class="panel-title">Layers</span>
+            </div>
+            <div class="panel-body">
+                <div class="form-group">
+                    <label>Base Map</label>
+                    <select id="basemap" onchange="changeBasemap()">
+                        <option value="osm">OpenStreetMap</option>
+                        <option value="satellite">Satellite</option>
+                        <option value="topo">Topographic</option>
+                    </select>
+                </div>
+                <button class="btn btn-red" id="susceptibilityBtn" onclick="toggleSusceptibilityMap()">🔥 Load Susceptibility Map</button>
+                <div class="form-group" id="opacityGroup" style="display:none; margin-top:10px;">
+                    <label>Overlay Opacity <span id="opacity-val">85%</span></label>
+                    <input type="range" id="opacitySlider" min="0" max="100" value="85"
+                        oninput="document.getElementById('opacity-val').textContent=this.value+'%'; setOverlayOpacity(this.value)">
+                </div>
+                <button class="btn btn-blue" id="pointsBtn" onclick="toggleSamplePoints()">📍 Show Sample Points</button>
+                <div id="loading"><span class="spinner"></span>Loading 1,000 points…</div>
+            </div>
+        </div>
+
+        <!-- Scenario Explorer -->
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-icon orange">🎛️</div>
+                <span class="panel-title">Scenario Explorer</span>
+            </div>
+            <div class="panel-body">
+                <p style="font-size:11px; color:var(--muted); margin-bottom:12px;">Adjust parameters to assess wildfire risk</p>
+
+                <div class="form-group">
+                    <label>NDVI <span id="ndvi-val">0.3</span></label>
+                    <input type="range" id="ndvi" min="-1" max="1" step="0.05" value="0.3" oninput="document.getElementById('ndvi-val').textContent=parseFloat(this.value).toFixed(2)">
+                </div>
+                <div class="form-group">
+                    <label>NBR <span id="nbr-val">-0.30</span></label>
+                    <input type="range" id="nbr" min="-1" max="1" step="0.05" value="-0.3" oninput="document.getElementById('nbr-val').textContent=parseFloat(this.value).toFixed(2)">
+                </div>
+                <div class="form-group">
+                    <label>Temperature (LST °C) <span id="lst-val">35</span></label>
+                    <input type="range" id="lst" min="10" max="60" step="1" value="35" oninput="document.getElementById('lst-val').textContent=this.value">
+                </div>
+                <div class="form-group">
+                    <label>Wind Speed (m/s) <span id="wind-val">5</span></label>
+                    <input type="range" id="wind" min="0" max="30" step="0.5" value="5" oninput="document.getElementById('wind-val').textContent=parseFloat(this.value).toFixed(1)">
+                </div>
+                <div class="form-group">
+                    <label>Slope (°) <span id="slope-val">15</span></label>
+                    <input type="range" id="slope" min="0" max="60" step="1" value="15" oninput="document.getElementById('slope-val').textContent=this.value">
+                </div>
+                <div class="form-group">
+                    <label>dNBR <span id="dnbr-val">0.50</span></label>
+                    <input type="range" id="dnbr" min="-1" max="1" step="0.05" value="0.5" oninput="document.getElementById('dnbr-val').textContent=parseFloat(this.value).toFixed(2)">
+                </div>
+
+                <button class="btn btn-red" onclick="predictSusceptibility()" style="margin-top:12px;">🔍 Assess Risk</button>
+                <div id="result"></div>
+            </div>
+        </div>
+
+        <!-- Legend -->
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-icon green">🗺️</div>
+                <span class="panel-title">Map Legend</span>
+            </div>
+            <div class="panel-body">
+                <div class="legend-gradient">
+                    <div class="gradient-bar"></div>
+                    <div class="gradient-labels">
+                        <span><span class="dot" style="background:#e74c3c"></span>High (&gt;70%)</span>
+                        <span><span class="dot" style="background:#f39c12"></span>Medium (40–70%)</span>
+                        <span><span class="dot" style="background:#2ecc71"></span>Low (&lt;40%)</span>
+                    </div>
+                </div>
+                <hr class="legend-divider">
+                <div class="legend-item">
+                    <div class="legend-dot" style="background:#e74c3c;"></div>
+                    <span>Burned Sample Points</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot" style="background:#2ecc71;"></div>
+                    <span>Unburned Sample Points</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="map"></div>
+</div>
+
+<script>
+var map = L.map('map').setView([40.2, 29.5], 10);
+
+var osm       = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution: '© OpenStreetMap'});
+var satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {attribution: '© Esri'});
+var topo      = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {attribution: '© OpenTopoMap'});
+osm.addTo(map);
+L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(map);
+
+
+var susceptibilityLayer = null;
+var samplePointsLayer   = null;
+var susceptibilityVisible = false;
+var pointsVisible = false;
+
+function changeBasemap() {
+    var val = document.getElementById('basemap').value;
+    map.eachLayer(function(layer) { if (layer instanceof L.TileLayer) map.removeLayer(layer); });
+    if (val === 'osm') osm.addTo(map);
+    else if (val === 'satellite') satellite.addTo(map);
+    else if (val === 'topo') topo.addTo(map);
+}
+
+var BOUNDS = {
+    south: 39.89957165945267,
+    north: 40.50234121509687,
+    west:  28.79998800887186,
+    east:  30.200461536814196
+};
+
+L.rectangle([[BOUNDS.south, BOUNDS.west], [BOUNDS.north, BOUNDS.east]],
+    {color: '#ff4d2e', weight: 1.5, fill: false, dashArray: '6,4', opacity: 0.7})
+    .addTo(map).bindPopup('<b style="color:#ff4d2e">Bursa Wildfire Study Area</b><br><span style="font-size:12px;color:#aaa">July 26, 2025</span>');
+
+function setOverlayOpacity(val) {
+    if (susceptibilityLayer) susceptibilityLayer.setOpacity(val / 100);
+}
+
+function toggleSusceptibilityMap() {
+    var btn = document.getElementById('susceptibilityBtn');
+    var opacityGroup = document.getElementById('opacityGroup');
+    if (susceptibilityVisible && susceptibilityLayer) {
+        map.removeLayer(susceptibilityLayer);
+        susceptibilityVisible = false;
+        btn.className = 'btn btn-red';
+        btn.innerHTML = '🔥 Load Susceptibility Map';
+        opacityGroup.style.display = 'none';
+    } else {
+        var imageBounds = [[BOUNDS.south, BOUNDS.west], [BOUNDS.north, BOUNDS.east]];
+        var opacity = document.getElementById('opacitySlider').value / 100;
+        susceptibilityLayer = L.imageOverlay('/static/Susceptibility_Map_Bursa.png?v=' + Date.now(), imageBounds, {opacity: opacity}).addTo(map);
+        susceptibilityVisible = true;
+        btn.className = 'btn btn-active';
+        btn.innerHTML = '✕ Hide Susceptibility Map';
+        opacityGroup.style.display = 'block';
+        map.fitBounds(imageBounds);
+    }
+}
+
+function toggleSamplePoints() {
+    var btn = document.getElementById('pointsBtn');
+    var loading = document.getElementById('loading');
+    if (pointsVisible && samplePointsLayer) {
+        map.removeLayer(samplePointsLayer);
+        pointsVisible = false;
+        btn.className = 'btn btn-blue';
+        btn.innerHTML = '📍 Show Sample Points';
+    } else {
+        loading.style.display = 'block';
+        btn.disabled = true;
+        fetch('/static/samplepoints.json')
+        .then(res => res.json())
+        .then(points => {
+            samplePointsLayer = L.layerGroup();
+            points.forEach(function(p) {
+                var color = p.label === 1 ? '#e74c3c' : '#2ecc71';
+                var label = p.label === 1 ? '🔥 Burned' : '🌿 Unburned';
+                L.circleMarker([p.lat, p.lng], {
+                    radius: 4, fillColor: color, color: '#fff',
+                    weight: 1, fillOpacity: 0.9
+                }).addTo(samplePointsLayer)
+                  .bindPopup('<b>' + label + '</b><br><span style="color:#aaa;font-size:11px">Lat: ' + p.lat.toFixed(4) + ' · Lng: ' + p.lng.toFixed(4) + '</span>');
+            });
+            samplePointsLayer.addTo(map);
+            pointsVisible = true;
+            btn.className = 'btn btn-green';
+            btn.innerHTML = '✕ Hide Sample Points';
+            btn.disabled = false;
+            loading.style.display = 'none';
+        });
+    }
+}
+
+function predictSusceptibility() {
+    var data = {
+        Aspect: 180, DEM: 400, EVI: 0.4,
+        LST:  parseFloat(document.getElementById('lst').value),
+        LULC: 111,
+        NBR:  parseFloat(document.getElementById('nbr').value),
+        NDVI: parseFloat(document.getElementById('ndvi').value),
+        NDWI: -0.2, Population: 55, Precipitation: 1.37, SAVI: 0.25,
+        Slope: parseFloat(document.getElementById('slope').value),
+        SoilMoisture: 0.02,
+        Wind: parseFloat(document.getElementById('wind').value),
+        dNBR: parseFloat(document.getElementById('dnbr').value)
+    };
+    fetch('/predict', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    })
+    .then(res => res.json())
+    .then(result => {
+        var div = document.getElementById('result');
+        div.style.display = 'block';
+        div.className = result.risk_level.toLowerCase();
+        var pct = (result.susceptibility * 100).toFixed(1);
+        div.innerHTML = '<div class="risk-label">⚠ ' + result.risk_level + ' Risk</div>' +
+                        '<div class="risk-pct">' + pct + '%</div>' +
+                        '<div class="risk-sub">Wildfire Susceptibility</div>';
+    });
+}
+
+map.on('click', function(e) {
+    var lat = e.latlng.lat, lng = e.latlng.lng;
+    var popup = L.popup()
+        .setLatLng(e.latlng)
+        .setContent('<div style="font-size:12px"><b style="color:#ff4d2e">📍 Location</b><br><span style="color:#6b7280">Lat: ' + lat.toFixed(4) + ' · Lng: ' + lng.toFixed(4) + '</span><br><br><span style="color:#6b7280"><span class="spinner"></span>Assessing risk…</span></div>')
+        .openOn(map);
+
+    fetch('/susceptibility_at_point?lat=' + lat + '&lng=' + lng)
+    .then(res => res.json())
+    .then(data => {
+        if (data.error) {
+            popup.setContent('<b>📍 Location</b><br>Lat: ' + lat.toFixed(4) + ' | Lng: ' + lng.toFixed(4) + '<br><br><i>' + data.error + '</i>');
+            return;
+        }
+        var color = data.risk_level === 'High' ? '#e74c3c' : data.risk_level === 'Medium' ? '#f39c12' : '#27ae60';
+        popup.setContent(
+            '<b>📍 Location</b><br>' +
+            'Lat: ' + lat.toFixed(4) + ' | Lng: ' + lng.toFixed(4) + '<br><br>' +
+            '<div style="background:' + color + ';color:white;padding:8px;border-radius:6px;text-align:center;">' +
+            '<b>Risk Level: ' + data.risk_level + '</b><br>' +
+            'Susceptibility: ' + (data.susceptibility * 100).toFixed(1) + '%' +
+            '</div>'
+        );
+    });
+});
+</script>
+</body>
+</html>

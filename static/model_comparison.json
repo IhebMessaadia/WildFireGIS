@@ -1,0 +1,23 @@
+{
+  "results": {
+    "Random Forest": {
+      "accuracy": 1.0,
+      "auc": 1.0,
+      "cv_mean": 0.963,
+      "cv_std": 0.0618
+    },
+    "Gradient Boosting": {
+      "accuracy": 0.985,
+      "auc": 1.0,
+      "cv_mean": 0.956,
+      "cv_std": 0.0635
+    },
+    "Logistic Regression": {
+      "accuracy": 0.99,
+      "auc": 0.9995,
+      "cv_mean": 0.964,
+      "cv_std": 0.0598
+    }
+  },
+  "best": "Random Forest"
+}
