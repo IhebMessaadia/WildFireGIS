@@ -1,7 +1,7 @@
 # Wildfire Susceptibility Mapping System — Bursa, Turkey (2025)
 
 CME434 GIS Final Project — Karabuk University, Department of Computer Engineering
-Instructor: Dr. Sohaib K M Abujayyab | Spring Semester 2024-2025
+Instructor: Dr. Sohaib K M Abujayyab | Spring Semester 2025-2026
 
 ## Overview
 A web-based GIS decision support system for wildfire susceptibility mapping using machine learning.
